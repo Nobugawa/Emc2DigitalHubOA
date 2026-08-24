@@ -12,6 +12,26 @@
   <meta property="og:image" content="/assets/images/emc2digital-logo-tagline.png" />
   <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/assets/css/styles.css?v=1.9" />
+  <style>
+    .quick-check{max-width:760px;margin-top:28px;background:#fff;border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:var(--shadow)}
+    .quick-check label{display:block;font-weight:900;color:var(--navy);font-size:18px;margin-bottom:9px}
+    .check-row{display:grid;grid-template-columns:1fr auto;gap:12px}
+    .check-row input{width:100%;min-height:56px;border:1px solid #bed0ea;border-radius:16px;padding:14px 16px;font:inherit;font-size:18px;color:var(--ink)}
+    .check-row .btn{white-space:nowrap}
+    .privacy-line{margin:12px 0 0;color:var(--muted);font-size:14px;font-weight:700}
+    .check-status{margin-top:18px;font-weight:800;color:var(--muted)}
+    .check-results{display:none;margin-top:24px;border-top:1px solid var(--line);padding-top:24px}
+    .check-results.show{display:block}
+    .result-score{display:inline-flex;align-items:center;justify-content:center;min-width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;font-size:24px;font-weight:900;margin-bottom:14px}
+    .check-results h3{font-size:30px;line-height:1.05;color:var(--navy);margin:0 0 12px}
+    .finding-list{display:grid;gap:10px;margin:18px 0 0;padding:0;list-style:none}
+    .finding-list li{border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:var(--soft);font-weight:750}
+    .result-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .result-meta span{border:1px solid var(--line);border-radius:999px;padding:7px 11px;color:var(--muted);font-size:13px;font-weight:800}
+    .next-choice{margin-top:24px;padding:20px;border-radius:20px;background:#eef5ff;border:1px solid var(--line)}
+    .next-choice p{margin-top:0;color:var(--muted)}
+    @media(max-width:640px){.check-row{grid-template-columns:1fr}.check-row .btn{width:100%}.quick-check{padding:20px}.result-score{width:62px;height:62px;min-width:62px}}
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -35,11 +55,11 @@
   <div class="container narrow reveal">
     <p class="eyebrow">Free business checkups · No geek speak</p>
     <h1>Something not working quite right?</h1>
-    <p class="hero-sub">You do not need to know the technical name for the problem. Tell us what you are noticing. We will check what can be seen publicly and explain what it means in plain English.</p>
+    <p class="hero-sub">You do not need to know the technical name for the problem. Pick what you are noticing and we will do the technical looking for you.</p>
     <div class="trust-row" aria-label="Checkup promises">
+      <span>No name needed</span>
+      <span>No email needed</span>
       <span>No password needed</span>
-      <span>Public information only</span>
-      <span>Plain-English results</span>
     </div>
   </div>
 </section>
@@ -49,25 +69,25 @@
     <div class="section-head reveal">
       <p class="eyebrow">Start with the symptom</p>
       <h2>Pick what you are noticing. We figure out what to check.</h2>
-      <p>You should not have to know whether the problem is an image, a server, DNS, an email record, a script, or something else before you can ask for help.</p>
+      <p>You should not have to know whether the problem is a picture, a server, a setting, or something else before you can ask for help.</p>
     </div>
     <div class="card-grid">
       <article class="service-card reveal">
         <div class="icon-badge">🐌</div>
         <h3>Why is my website so slow?</h3>
-        <p>We will look for the common causes behind a slow public website — such as oversized images, heavy page content, loading delays, and other visible performance problems.</p>
-        <a href="#first-checkup">Start here →</a>
+        <p>Enter your website below. We will run a public mobile speed check and explain the biggest problems in normal language.</p>
+        <a href="#first-checkup">Check my website →</a>
       </article>
       <article class="service-card reveal delay-1">
         <div class="icon-badge">@</div>
         <h3>Is my business email set up properly?</h3>
-        <p>We will check the public settings that help other mail systems decide whether your business email looks legitimate and where it should be delivered.</p>
+        <p>Check the public settings that help other mail systems decide whether your business email looks legitimate and where it should go.</p>
         <a href="#coming-next">Coming next →</a>
       </article>
       <article class="service-card reveal delay-2">
         <div class="icon-badge">✓</div>
         <h3>Is anything obviously wrong with my website?</h3>
-        <p>A broader check for common public-facing problems involving speed, secure connections, mobile experience, and basic website setup.</p>
+        <p>A broader public check for common problems involving speed, secure connections, mobile experience, and basic setup.</p>
         <a href="#coming-next">Coming next →</a>
       </article>
     </div>
@@ -75,19 +95,33 @@
 </section>
 
 <section id="first-checkup" class="section method">
-  <div class="container method-grid">
+  <div class="container narrow">
     <div class="method-copy reveal">
-      <p class="eyebrow">First checkup</p>
+      <p class="eyebrow">Free checkup</p>
       <h2>Why is my website so slow?</h2>
-      <p>This is the first diagnostic we are building because you should not have to guess whether your pictures, hosting, scripts, fonts, or something else are causing the problem.</p>
-      <p>The finished check will ask for only your public website address. It will not require your website login or hosting password.</p>
-      <a class="btn btn-primary" href="/index.html#contact">Tell us what you are seeing now</a>
-    </div>
-    <div class="steps reveal delay-1">
-      <div class="step"><span>1</span><div><h3>You give us the website</h3><p>Just the public web address. No account access for the observation stage.</p></div></div>
-      <div class="step"><span>2</span><div><h3>We check the likely causes</h3><p>The tool does the technical looking so you do not need to know which technical tool to choose.</p></div></div>
-      <div class="step"><span>3</span><div><h3>We explain the biggest problem</h3><p>Results will lead with what is wrong and why it matters, not with acronyms and engineering measurements.</p></div></div>
-      <div class="step"><span>4</span><div><h3>You choose what happens next</h3><p>Fix an easy item yourself, let EMC2 prepare an easy fix, or ask us to handle work that requires account access.</p></div></div>
+      <p>Just enter the website address. That is all we need for this first look.</p>
+
+      <form id="speed-check-form" class="quick-check">
+        <label for="website-url">Your website</label>
+        <div class="check-row">
+          <input id="website-url" name="website" type="text" inputmode="url" autocomplete="url" placeholder="example.com" aria-describedby="privacy-line" required />
+          <button class="btn btn-primary" type="submit">Check my site</button>
+        </div>
+        <p id="privacy-line" class="privacy-line">No name. No email. No login. We only check the public website you enter.</p>
+        <div id="check-status" class="check-status" role="status" aria-live="polite"></div>
+        <div id="check-results" class="check-results" aria-live="polite">
+          <div id="result-score" class="result-score" aria-label="Performance score"></div>
+          <h3 id="result-headline"></h3>
+          <p id="result-summary"></p>
+          <ul id="finding-list" class="finding-list"></ul>
+          <div id="result-meta" class="result-meta"></div>
+          <div class="next-choice">
+            <strong>Want help fixing what we found?</strong>
+            <p>That part is optional. You can use the free result and leave, or ask EMC2 to help.</p>
+            <a class="btn btn-secondary" href="/index.html#contact">Help me fix it</a>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 </section>
@@ -95,33 +129,17 @@
 <section id="coming-next" class="section">
   <div class="container">
     <div class="section-head reveal">
-      <p class="eyebrow">What this will not become</p>
+      <p class="eyebrow">Simple on purpose</p>
       <h2>No giant toolbox of scary technical gadgets.</h2>
-      <p>We are deliberately keeping the checkups focused on common business-owner questions. Technical details can be available for people who want them, but they will not be the front door.</p>
+      <p>We are keeping these checkups focused on common questions. Technical details can exist underneath, but they should not be the front door.</p>
     </div>
     <div class="problem-strip" style="border-radius:26px;padding:28px;">
       <div class="strip-grid">
         <div class="strip-card"><span class="metric">01</span><h2>Problem first</h2><p>“My website is slow” comes before asking you to understand why.</p></div>
         <div class="strip-card"><span class="metric">02</span><h2>Plain English</h2><p>We tell you what matters before showing technical labels.</p></div>
-        <div class="strip-card"><span class="metric">03</span><h2>Useful next step</h2><p>The result should help you act, not send you into a maze of documentation.</p></div>
+        <div class="strip-card"><span class="metric">03</span><h2>Your choice</h2><p>Use the result for free. Ask for help only if you want it.</p></div>
       </div>
     </div>
-  </div>
-</section>
-
-<section class="section offer-band">
-  <div class="container offer reveal">
-    <div>
-      <p class="eyebrow">Observation first</p>
-      <h2>We can learn a lot without your passwords.</h2>
-      <p>Public websites and public domain settings reveal many common problems. Account access becomes necessary only when the fix requires changing something inside your website, host, domain, or email account.</p>
-    </div>
-    <ul>
-      <li>Public website checks</li>
-      <li>Public email/domain checks</li>
-      <li>No login for first look</li>
-      <li>Access only when needed to fix</li>
-    </ul>
   </div>
 </section>
 </main>
@@ -143,7 +161,59 @@
     <span>Website and lead system by EMC2 Digital.</span>
   </div>
 </footer>
-<div class="version-badge" aria-label="Page version">CHECKUPS 0.1</div>
+<div class="version-badge" aria-label="Page version">CHECKUPS 0.2</div>
 <script src="/assets/js/main.js?v=1.9"></script>
+<script>
+(function(){
+  const form = document.getElementById('speed-check-form');
+  const input = document.getElementById('website-url');
+  const status = document.getElementById('check-status');
+  const results = document.getElementById('check-results');
+  const score = document.getElementById('result-score');
+  const headline = document.getElementById('result-headline');
+  const summary = document.getElementById('result-summary');
+  const list = document.getElementById('finding-list');
+  const meta = document.getElementById('result-meta');
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const value = input.value.trim();
+    if(!value) return;
+    results.classList.remove('show');
+    status.textContent = 'Checking your public website. This can take a little while…';
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Checking…';
+
+    try{
+      const response = await fetch('/.netlify/functions/website-speed?url=' + encodeURIComponent(value));
+      const data = await response.json();
+      if(!response.ok) throw new Error(data.error || 'We could not check that website right now.');
+
+      score.textContent = data.score;
+      headline.textContent = data.headline;
+      summary.textContent = 'Here are the biggest things we noticed in this public mobile test:';
+      list.innerHTML = '';
+      data.findings.forEach(function(item){
+        const li = document.createElement('li');
+        li.textContent = item;
+        list.appendChild(li);
+      });
+      meta.innerHTML = '';
+      if(data.loadMoment){ const s=document.createElement('span'); s.textContent='Main content: ' + data.loadMoment; meta.appendChild(s); }
+      if(data.pageWeight){ const s=document.createElement('span'); s.textContent='Page size: ' + data.pageWeight; meta.appendChild(s); }
+      const n=document.createElement('span'); n.textContent='Mobile check'; meta.appendChild(n);
+      status.textContent = '';
+      results.classList.add('show');
+      results.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }catch(err){
+      status.textContent = err.message || 'We could not run the check. Please try again.';
+    }finally{
+      button.disabled = false;
+      button.textContent = 'Check my site';
+    }
+  });
+})();
+</script>
 </body>
 </html>
