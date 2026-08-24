@@ -2,8 +2,9 @@ const dns = require('node:dns').promises;
 const net = require('node:net');
 
 const MAX_HTML_BYTES = 2_000_000;
-const MAX_IMAGES_TO_CHECK = 24;
+const MAX_ASSETS_TO_CHECK = 40;
 const FETCH_TIMEOUT_MS = 8000;
+const MOBILE_DOWN_BPS = 1_600_000; // conservative slow-4G-style stress model
 
 function normalizeUrl(value) {
   const trimmed = String(value || '').trim();
@@ -75,14 +76,26 @@ function absoluteUrl(value, base) {
 }
 
 function extractAssets(html, baseUrl) {
-  const images = [], scripts = [], styles = []; let m;
-  const imgRe = /<img\b[^>]*?\bsrc=["']([^"']+)["'][^>]*>/gi;
-  while ((m = imgRe.exec(html)) !== null) { const u = absoluteUrl(m[1], baseUrl); if (u) images.push(u); }
+  const eagerImages = [], lazyImages = [], scripts = [], styles = []; let m;
+  const imgTagRe = /<img\b[^>]*>/gi;
+  while ((m = imgTagRe.exec(html)) !== null) {
+    const tag = m[0];
+    const src = tag.match(/\bsrc=["']([^"']+)["']/i);
+    if (!src) continue;
+    const u = absoluteUrl(src[1], baseUrl);
+    if (!u) continue;
+    if (/\bloading=["']lazy["']/i.test(tag)) lazyImages.push(u); else eagerImages.push(u);
+  }
   const scriptRe = /<script\b[^>]*?\bsrc=["']([^"']+)["'][^>]*>/gi;
   while ((m = scriptRe.exec(html)) !== null) { const u = absoluteUrl(m[1], baseUrl); if (u) scripts.push(u); }
   const linkRe = /<link\b[^>]*?\brel=["'][^"']*stylesheet[^"']*["'][^>]*?\bhref=["']([^"']+)["'][^>]*>|<link\b[^>]*?\bhref=["']([^"']+)["'][^>]*?\brel=["'][^"']*stylesheet[^"']*["'][^>]*>/gi;
   while ((m = linkRe.exec(html)) !== null) { const u = absoluteUrl(m[1] || m[2], baseUrl); if (u) styles.push(u); }
-  return { images: [...new Set(images)], scripts: [...new Set(scripts)], styles: [...new Set(styles)] };
+  return {
+    eagerImages: [...new Set(eagerImages)],
+    lazyImages: [...new Set(lazyImages)],
+    scripts: [...new Set(scripts)],
+    styles: [...new Set(styles)]
+  };
 }
 
 async function headSize(urlString) {
@@ -123,12 +136,18 @@ exports.handler = async (event) => {
     if (htmlBytes > MAX_HTML_BYTES) throw new Error('That page is unusually large, so this check stopped before downloading more of it.');
 
     const assets = extractAssets(html, finalUrl);
-    const imageInfo = await Promise.all(assets.images.slice(0, MAX_IMAGES_TO_CHECK).map(headSize));
+    const initialUrls = [...new Set([...assets.eagerImages, ...assets.scripts, ...assets.styles])].slice(0, MAX_ASSETS_TO_CHECK);
+    const initialInfo = await Promise.all(initialUrls.map(headSize));
+    const sizedInitial = initialInfo.filter(x => Number.isFinite(x.bytes));
+    const knownInitialBytes = htmlBytes + sizedInitial.reduce((sum, x) => sum + x.bytes, 0);
+
+    const allImageUrls = [...new Set([...assets.eagerImages, ...assets.lazyImages])].slice(0, MAX_ASSETS_TO_CHECK);
+    const imageInfo = await Promise.all(allImageUrls.map(headSize));
     const sizedImages = imageInfo.filter(x => Number.isFinite(x.bytes));
     const knownImageBytes = sizedImages.reduce((sum, x) => sum + x.bytes, 0);
     const largeImages = sizedImages.filter(x => x.bytes >= 500_000).sort((a,b) => b.bytes - a.bytes);
     const veryLargeImages = sizedImages.filter(x => x.bytes >= 1_000_000);
-    const totalFiles = assets.images.length + assets.scripts.length + assets.styles.length;
+    const totalFiles = assets.eagerImages.length + assets.lazyImages.length + assets.scripts.length + assets.styles.length;
 
     let responseStatus = 'good';
     let responseText = 'Your website starts responding quickly. That is a good sign for visitors.';
@@ -136,7 +155,7 @@ exports.handler = async (event) => {
     else if (responseMs > 900) { responseStatus = 'could-be-better'; responseText = 'Your website is a little slower than we would like at the start. There may be room to improve the server or hosting response.'; }
 
     let imageStatus = 'good';
-    let imageText = assets.images.length ? 'Your homepage pictures are not unusually heavy based on the images we could measure.' : 'We did not find normal image files on this page to measure.';
+    let imageText = allImageUrls.length ? 'Your homepage pictures are not unusually heavy based on the images we could measure.' : 'We did not find normal image files on this page to measure.';
     if (veryLargeImages.length || knownImageBytes > 8_000_000) { imageStatus = 'needs-attention'; imageText = 'Your pictures are heavy enough that they can noticeably slow visitors, especially on phones or weaker connections.'; }
     else if (largeImages.length || knownImageBytes > 4_000_000) { imageStatus = 'could-be-better'; imageText = 'Your pictures are reasonable, but we see room to make them lighter for mobile visitors without necessarily making them look worse.'; }
 
@@ -145,8 +164,20 @@ exports.handler = async (event) => {
     if (totalFiles >= 45) { complexityStatus = 'needs-attention'; complexityText = 'Your homepage asks the browser to load a lot of separate files. That can add noticeable waiting time on slower devices and connections.'; }
     else if (totalFiles >= 28) { complexityStatus = 'could-be-better'; complexityText = 'Your homepage loads quite a few separate files. This may add some waiting time, particularly on phones.'; }
 
-    const overall = rank([responseStatus, imageStatus, complexityStatus]);
-    const overallLabel = overall === 'good' ? 'GOOD' : overall === 'could-be-better' ? 'COULD BE BETTER' : 'NEEDS ATTENTION';
+    const transferSeconds = knownInitialBytes * 8 / MOBILE_DOWN_BPS;
+    const mobileFloorSeconds = responseMs / 1000 + transferSeconds;
+    let mobileStatus = 'good';
+    let mobileText = 'The page looks reasonably resilient on a weaker mobile connection based on the files we can measure.';
+    if (mobileFloorSeconds > 8 || knownInitialBytes > 1_500_000) {
+      mobileStatus = 'needs-attention';
+      mobileText = 'On a weaker 4G-style connection, the amount of data needed early in the page can create noticeable waiting. Newer 5G phones may hide this problem, but slower phones or weaker signal may not.';
+    } else if (mobileFloorSeconds > 4.5 || knownInitialBytes > 900_000) {
+      mobileStatus = 'could-be-better';
+      mobileText = 'The site should feel fine on strong 5G or Wi-Fi, but weaker mobile connections may expose some extra waiting. There may be worthwhile room to make the first screen lighter.';
+    }
+
+    const overall = rank([responseStatus, imageStatus, complexityStatus, mobileStatus]);
+    const overallLabel = overall === 'good' ? 'LOOKS HEALTHY' : overall === 'could-be-better' ? 'WORTH IMPROVING' : 'NEEDS ATTENTION';
     const headline = overall === 'good' ? 'Your website passed our basic speed check.' : overall === 'could-be-better' ? 'Your website is usable, but we found room to make it faster.' : 'We found speed issues worth fixing.';
     const summary = overall === 'good'
       ? 'We did not find an obvious speed problem in the areas we tested.'
@@ -161,13 +192,15 @@ exports.handler = async (event) => {
         requestedUrl: startUrl.toString(), finalUrl: finalUrl.toString(),
         overall, overallLabel, headline, summary,
         checks: [
+          { label: 'Mobile resilience', status: mobileStatus, text: mobileText, detail: `${humanBytes(knownInitialBytes)} of measurable early page data; modeled on a conservative weak-4G connection` },
           { label: 'Website response', status: responseStatus, text: responseText, detail: `${(responseMs / 1000).toFixed(1)} sec in this check` },
           { label: 'Pictures', status: imageStatus, text: imageText, detail: knownImageBytes ? `${humanBytes(knownImageBytes)} across the pictures we could measure` : 'No reliable picture-size total available' },
           { label: 'Page complexity', status: complexityStatus, text: complexityText, detail: `${totalFiles} picture, script, and style files found` }
         ],
-        methodology: 'We check how quickly the public site answers, the weight of measurable homepage pictures, and how many separate page files the browser is asked to load.',
+        methodology: 'We check the public site from outside your device, including how quickly it answers, measurable early page data, picture weight, and page-file count. For mobile resilience we apply a conservative weak-4G stress model so a blazing 5G phone does not hide a heavy page.',
+        mobileContext: 'This is intentionally a stress test, not a prediction of every visitor. A newer phone on strong 5G may be much faster; an older phone, indoor signal, congested network, or weak 4G can be slower.',
         localTip: 'If the site feels slow to you but passes here, try it on your phone with Wi-Fi turned off. If it becomes fast, your Wi-Fi, device, browser, or local connection may be the problem rather than the website itself.',
-        note: 'This basic check is an outside view of the public website. It does not require your login and does not test every possible cause of slowness.'
+        note: 'This basic mobile result is a network-and-page-weight estimate, not yet a full emulated phone browser test. A true browser test can additionally measure rendering, JavaScript work, and visual stability.'
       })
     };
   } catch (error) {
