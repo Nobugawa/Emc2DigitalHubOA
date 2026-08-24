@@ -30,6 +30,19 @@ function fieldMetric(metrics, key, divisor = 1) {
   return metric.percentile / divisor;
 }
 
+function safeGoogleError(data, status) {
+  const message = data && data.error && data.error.message ? String(data.error.message) : '';
+  if (/API key not valid/i.test(message)) return 'Google rejected the API key.';
+  if (/API has not been used|disabled/i.test(message)) return 'The PageSpeed Insights API is not enabled for this Google project.';
+  if (/quota/i.test(message)) return 'Google PageSpeed quota was exceeded.';
+  if (/referer|referrer|restriction|forbidden|permission/i.test(message)) return 'Google rejected the API-key restrictions for this server request.';
+  if (/billing/i.test(message)) return 'Google says billing or account activation is required for this request.';
+  if (status === 429) return 'Google is rate-limiting PageSpeed requests.';
+  if (status === 403) return 'Google returned a permission error for the PageSpeed request.';
+  if (status >= 500) return 'Google PageSpeed is temporarily unavailable.';
+  return message ? message.slice(0, 180) : `Google returned HTTP ${status}.`;
+}
+
 exports.handler = async (event) => {
   const url = normalizeUrl(event.queryStringParameters && event.queryStringParameters.url);
   if (!url) {
@@ -38,7 +51,7 @@ exports.handler = async (event) => {
 
   const key = process.env.GOOGLE_PSI_API_KEY;
   if (!key) {
-    return { statusCode: 503, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: false }) };
+    return { statusCode: 503, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: false, available: false, diagnostic: 'The Netlify function cannot see GOOGLE_PSI_API_KEY.' }) };
   }
 
   try {
@@ -49,15 +62,21 @@ exports.handler = async (event) => {
     endpoint.searchParams.set('key', key);
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 45000);
+    const timer = setTimeout(() => controller.abort(), 25000);
     let response;
     try {
       response = await fetch(endpoint.toString(), { headers: { accept: 'application/json' }, signal: controller.signal });
     } finally { clearTimeout(timer); }
 
-    const data = await response.json();
+    let data = {};
+    try { data = await response.json(); } catch {}
+
     if (!response.ok || !data.lighthouseResult) {
-      return { statusCode: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: true, available: false }) };
+      return {
+        statusCode: 502,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+        body: JSON.stringify({ configured: true, available: false, diagnostic: safeGoogleError(data, response.status), googleStatus: response.status })
+      };
     }
 
     const lighthouse = data.lighthouseResult;
@@ -87,11 +106,7 @@ exports.handler = async (event) => {
       if (fieldLcp !== null) parts.push(`main content about ${fieldLcp.toFixed(1)} sec at the 75th percentile`);
       if (fieldInp !== null) parts.push(`interaction response about ${Math.round(fieldInp)} ms`);
       if (fieldCls !== null) parts.push(`layout shift ${fieldCls.toFixed(2)}`);
-      realVisitors = {
-        available: true,
-        category: field.overall_category || null,
-        text: `Google has enough Chrome usage data for this site. Among real visitors, ${parts.join(', ')}.`
-      };
+      realVisitors = { available: true, category: field.overall_category || null, text: `Google has enough Chrome usage data for this site. Among real visitors, ${parts.join(', ')}.` };
     }
 
     return {
@@ -108,7 +123,10 @@ exports.handler = async (event) => {
         note: 'This is an actual Lighthouse mobile-browser simulation. Google still cannot reproduce every phone, signal strength, carrier, or location.'
       })
     };
-  } catch {
-    return { statusCode: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: true, available: false }) };
+  } catch (error) {
+    const diagnostic = error && error.name === 'AbortError'
+      ? 'The Google PageSpeed request took longer than 25 seconds and was stopped.'
+      : 'The PageSpeed request failed before Google returned a usable result.';
+    return { statusCode: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: true, available: false, diagnostic }) };
   }
 };
