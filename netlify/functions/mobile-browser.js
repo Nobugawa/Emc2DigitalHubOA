@@ -39,7 +39,7 @@ function safeGoogleError(data, status) {
   if (/billing/i.test(message)) return 'Google says billing or account activation is required for this request.';
   if (status === 429) return 'Google is rate-limiting PageSpeed requests.';
   if (status === 403) return 'Google returned a permission error for the PageSpeed request.';
-  if (status >= 500) return 'Google PageSpeed is temporarily unavailable.';
+  if (status >= 500) return `Google PageSpeed returned HTTP ${status}${message ? `: ${message.slice(0, 140)}` : '.'}`;
   return message ? message.slice(0, 180) : `Google returned HTTP ${status}.`;
 }
 
@@ -55,7 +55,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const endpoint = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed');
+    const endpoint = new URL('https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed');
     endpoint.searchParams.set('url', url);
     endpoint.searchParams.set('strategy', 'mobile');
     endpoint.searchParams.set('category', 'performance');
