@@ -33,13 +33,13 @@ function fieldMetric(metrics, key, divisor = 1) {
 function safeGoogleError(data, status) {
   const message = data && data.error && data.error.message ? String(data.error.message) : '';
   if (/API key not valid/i.test(message)) return 'Google rejected the API key.';
-  if (/API has not been used|disabled/i.test(message)) return 'The PageSpeed Insights API is not enabled for this Google project.';
-  if (/quota/i.test(message)) return 'Google PageSpeed quota was exceeded.';
-  if (/referer|referrer|restriction|forbidden|permission/i.test(message)) return 'Google rejected the API-key restrictions for this server request.';
+  if (/API has not been used|disabled/i.test(message)) return 'The Google mobile speed service is not enabled for this project.';
+  if (/quota/i.test(message)) return 'The Google mobile speed service has reached its usage limit.';
+  if (/referer|referrer|restriction|forbidden|permission/i.test(message)) return 'Google rejected the security settings for this request.';
   if (/billing/i.test(message)) return 'Google says billing or account activation is required for this request.';
-  if (status === 429) return 'Google is rate-limiting PageSpeed requests.';
-  if (status === 403) return 'Google returned a permission error for the PageSpeed request.';
-  if (status >= 500) return `Google PageSpeed returned HTTP ${status}${message ? `: ${message.slice(0, 140)}` : '.'}`;
+  if (status === 429) return 'Google is temporarily limiting speed-test requests.';
+  if (status === 403) return 'Google returned a permission error for the mobile speed test.';
+  if (status >= 500) return `Google's mobile speed test returned HTTP ${status}${message ? `: ${message.slice(0, 140)}` : '.'}`;
   return message ? message.slice(0, 180) : `Google returned HTTP ${status}.`;
 }
 
@@ -51,7 +51,7 @@ exports.handler = async (event) => {
 
   const key = process.env.GOOGLE_PSI_API_KEY;
   if (!key) {
-    return { statusCode: 503, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: false, available: false, diagnostic: 'The Netlify function cannot see GOOGLE_PSI_API_KEY.' }) };
+    return { statusCode: 503, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: false, available: false, diagnostic: 'The mobile speed test is not fully connected yet.' }) };
   }
 
   try {
@@ -89,9 +89,9 @@ exports.handler = async (event) => {
     const cls = metricValue(audits, 'cumulative-layout-shift');
 
     let text;
-    if (status === 'good') text = 'A simulated mobile browser also found strong performance. This is a tougher test than simply checking whether the server responds quickly.';
-    else if (status === 'could-be-better') text = 'A simulated mobile browser found noticeable room for improvement. Fast Wi-Fi or strong 5G may hide some of this waiting.';
-    else text = 'A simulated mobile browser found significant performance problems. Visitors on ordinary or weaker mobile conditions are more likely to notice them.';
+    if (status === 'good') text = 'Google’s phone test found strong performance. The site should feel quick for most mobile visitors.';
+    else if (status === 'could-be-better') text = 'Google’s phone test found noticeable room for improvement. Fast Wi-Fi or strong 5G may hide some of this waiting.';
+    else text = 'Google’s phone test found significant speed problems. Visitors on ordinary or weaker mobile connections are more likely to notice them.';
 
     const field = data.loadingExperience || {};
     const fieldMetrics = field.metrics || {};
@@ -103,10 +103,10 @@ exports.handler = async (event) => {
     let realVisitors = null;
     if (hasField) {
       const parts = [];
-      if (fieldLcp !== null) parts.push(`main content about ${fieldLcp.toFixed(1)} sec at the 75th percentile`);
-      if (fieldInp !== null) parts.push(`interaction response about ${Math.round(fieldInp)} ms`);
-      if (fieldCls !== null) parts.push(`layout shift ${fieldCls.toFixed(2)}`);
-      realVisitors = { available: true, category: field.overall_category || null, text: `Google has enough Chrome usage data for this site. Among real visitors, ${parts.join(', ')}.` };
+      if (fieldLcp !== null) parts.push(`main content about ${fieldLcp.toFixed(1)} sec at the slower end of normal visits`);
+      if (fieldInp !== null) parts.push(`tap/click response about ${Math.round(fieldInp)} ms`);
+      if (fieldCls !== null) parts.push(`page movement ${fieldCls.toFixed(2)}`);
+      realVisitors = { available: true, category: field.overall_category || null, text: `Google has enough real Chrome visitor data for this site. It shows ${parts.join(', ')}.` };
     }
 
     return {
@@ -115,18 +115,18 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         configured: true,
         available: true,
-        label: 'Simulated phone browser',
+        label: 'Google phone speed test',
         status,
         text,
-        detail: `Lighthouse mobile test: ${score}/100; main content ${msToSeconds(lcpMs) || 'n/a'}; first content ${msToSeconds(fcpMs) || 'n/a'}; browser blocking ${Number.isFinite(tbtMs) ? Math.round(tbtMs) + ' ms' : 'n/a'}; layout shift ${Number.isFinite(cls) ? cls.toFixed(2) : 'n/a'}`,
+        detail: `Google mobile score: ${score}/100; main content ${msToSeconds(lcpMs) || 'n/a'}; first visible content ${msToSeconds(fcpMs) || 'n/a'}; browser waiting ${Number.isFinite(tbtMs) ? Math.round(tbtMs) + ' ms' : 'n/a'}; page movement ${Number.isFinite(cls) ? cls.toFixed(2) : 'n/a'}`,
         realVisitors,
-        note: 'This is an actual Lighthouse mobile-browser simulation. Google still cannot reproduce every phone, signal strength, carrier, or location.'
+        note: 'Google tests the site as if it were being opened on a phone. Actual results still vary by phone, signal strength, carrier, and location.'
       })
     };
   } catch (error) {
     const diagnostic = error && error.name === 'AbortError'
-      ? 'The Google PageSpeed request took longer than 55 seconds and was stopped.'
-      : 'The PageSpeed request failed before Google returned a usable result.';
+      ? 'Google’s phone speed test took longer than 55 seconds and was stopped.'
+      : 'Google’s phone speed test did not return a usable result.';
     return { statusCode: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: true, available: false, diagnostic }) };
   }
 };
