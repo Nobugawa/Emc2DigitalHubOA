@@ -62,7 +62,7 @@ exports.handler = async (event) => {
     endpoint.searchParams.set('key', key);
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25000);
+    const timer = setTimeout(() => controller.abort(), 55000);
     let response;
     try {
       response = await fetch(endpoint.toString(), { headers: { accept: 'application/json' }, signal: controller.signal });
@@ -125,7 +125,7 @@ exports.handler = async (event) => {
     };
   } catch (error) {
     const diagnostic = error && error.name === 'AbortError'
-      ? 'The Google PageSpeed request took longer than 25 seconds and was stopped.'
+      ? 'The Google PageSpeed request took longer than 55 seconds and was stopped.'
       : 'The PageSpeed request failed before Google returned a usable result.';
     return { statusCode: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, body: JSON.stringify({ configured: true, available: false, diagnostic }) };
   }
