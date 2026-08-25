@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://emc2digital.com/sitemap.xml
