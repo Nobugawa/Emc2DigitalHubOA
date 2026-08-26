@@ -14,10 +14,10 @@ Files:
 Netlify form:
 The homepage contact form uses data-netlify="true" and action="/thank-you.html". It captures text fields only: business name, name, email, phone, issue type, and message.
 
-Version marker: EMC 1.9
+Version marker: EMC 1.10
 
 Public copy removes internal strategy terms such as hub/spoke, authority library, flagship concept, and placeholder implementation notes.
 
-V1.8 update: cleaned the footer back to text-only, kept the no-tagline header logo, removed footer logo styling, version badge updated to EMC 1.9, and CSS/JS links cache-busted with ?v=1.9.
+V1.10 update: changed the hero secondary CTA from “See service paths” to “See How We Can Help” for clearer non-technical wording, updated version badge to EMC 1.10, and cache-busted CSS/JS links with ?v=1.10.
 
 V1.9 update: cleaned the Digital Systems Snapshot item alignment and rewrote the email guide section title for non-technical SMB readers.
